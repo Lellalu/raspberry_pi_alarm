@@ -1,0 +1,3 @@
+playsound
+fastapi
+"uvicorn[standard]"
