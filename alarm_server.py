@@ -4,7 +4,8 @@ import queue
 import time
 import tkinter as tk
 from threading import Thread
-from tkinter import Entry, Label, StringVar, messagebox
+from tkinter import Entry, Label, StringVar
+import multiprocessing
 
 import playsound
 import uvicorn
@@ -18,7 +19,7 @@ class CountDown(BaseModel):
     minute: str
     second: str
 
-def create_alarm_app():
+def create_alarm_app(sound_file: str):
   root = tk.Tk()
   root.geometry("600x500")
   root.title("Time Counter")
@@ -47,7 +48,7 @@ def create_alarm_app():
   second_label.grid(row=0, column=2)
   second_entry.grid(row=1, column=2)
 
-  def submit(count_down: CountDown):
+  def set_countdown(count_down: CountDown):
     temp = int(count_down.hour)*3600 + int(count_down.minute)*60 + int(count_down.second)
     while temp >-1:
       if not time_queue.empty():
@@ -63,14 +64,19 @@ def create_alarm_app():
       root.update()
       time.sleep(1)
       if (temp == 0):
-        messagebox.showinfo("Time Countdown", "Time's up")
+        p = multiprocessing.Process(target=playsound.playsound, args=(sound_file, ))
+        p.start()
+        while p.is_alive():
+          if not time_queue.empty():
+            p.terminate()
+          time.sleep(100)
       temp -= 1
 
   def check_queue():
     try:
       while True:
         new_time = time_queue.get_nowait()
-        submit(new_time)
+        set_countdown(new_time)
     except queue.Empty:
       pass
     root.after(100, check_queue)
@@ -95,6 +101,8 @@ if __name__ == "__main__":
                       help='The web api host, default to 0.0.0.0')
   parser.add_argument('--port', type=int, default=8080, dest="port",
                       help='The web api port, default to 8080')
+  parser.add_argument('--sound_file', type=str, required=True, dest='sound_file',
+                      help='Sound to play when the count down hits zero')
   args = parser.parse_args()
 
   run_web_app_fn = functools.partial(
@@ -103,5 +111,5 @@ if __name__ == "__main__":
   api_thread = Thread(target=run_web_app_fn, )
   api_thread.start()
 
-  alarm_app = create_alarm_app()
+  alarm_app = create_alarm_app(args.sound_file)
   alarm_app.mainloop()
