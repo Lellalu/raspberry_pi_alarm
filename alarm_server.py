@@ -69,7 +69,7 @@ def create_alarm_app(sound_file: str):
         while p.is_alive():
           if not time_queue.empty():
             p.terminate()
-          time.sleep(100)
+          time.sleep(0.1)
       temp -= 1
 
   def check_queue():
